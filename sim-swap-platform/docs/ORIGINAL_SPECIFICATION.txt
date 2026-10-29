@@ -1,0 +1,384 @@
+Act as a senior telecom fraud architect, machine learning engineer, backend engineer, security engineer, and DevOps engineer.
+
+Build a complete SIM Swap Fraud Detection and Response Platform for telecom operators, banks, fintech companies, and mobile money providers.
+
+Implement the actual application, ML pipelines, integrations, tests, infrastructure, and documentation. Do not stop at an architecture proposal, sample notebook, UI mockup, or skeleton project.
+
+The system must identify suspicious SIM replacement activity and related account takeover attempts while minimizing disruption to legitimate customers.
+
+## 1. Working process
+
+Before coding:
+
+- Inspect the existing repository and follow its conventions.
+- Identify available datasets, integration specifications, infrastructure, and credentials without exposing secrets.
+- Document assumptions, missing dependencies, architecture decisions, and deployment blockers.
+- Ask questions only when an answer materially affects implementation. Otherwise, choose a reasonable configurable default and continue.
+- Create IMPLEMENTATION_PLAN.md and SIM_SWAP_SYSTEM.md. Keep both updated throughout development.
+- Use supported dependency versions, pin dependencies, and verify official documentation before implementing external integrations.
+
+Build incrementally, completing and testing each milestone before moving forward.
+
+Do not describe the system as production ready until its release checks pass. If real operator access or representative labeled data is unavailable, deliver a working demonstration with an explicit production readiness report.
+
+## 2. Core fraud scenarios
+
+Detect suspicious sequences involving:
+
+- SIM replacement followed by login from an unfamiliar device.
+- SIM replacement followed by password reset or account recovery.
+- SIM replacement followed by new beneficiary creation and fund transfer.
+- Repeated replacement requests within a short period.
+- Number porting followed by suspicious account activity.
+- Unusual replacement activity associated with a retail outlet or agent, where authorized data exists.
+- Changes in device, location, authentication behavior, and transaction velocity.
+- Suspicious activity across linked accounts or identifiers where data sharing is permitted.
+
+Distinguish legitimate SIM replacement, eSIM migration, device upgrade, travel, number recycling, and account recovery from fraud.
+
+A SIM change is a risk signal, not proof of fraud. Number verification confirms a network relationship; it does not independently prove the rightful customer controls the account.
+
+Support both:
+
+1. Pre-replacement assessment, when an operator can provide replacement-request data.
+2. Post-replacement assessment before login, recovery, beneficiary changes, or transactions.
+
+Keep these modes separate because their available signals differ.
+
+## 3. Default technology stack
+
+Unless the repository already establishes another suitable stack, use:
+
+- Python and FastAPI for backend services and ML inference.
+- React, TypeScript, Tailwind CSS, and Zustand for the analyst dashboard.
+- PostgreSQL for operational records.
+- Redis for short-lived feature caching and rate limits.
+- Kafka-compatible event streaming for asynchronous processing.
+- Scikit-learn and either XGBoost or LightGBM for supervised models.
+- Isolation Forest as an optional anomaly signal.
+- MLflow for experiment tracking and model registration.
+- S3-compatible storage for datasets, reports, and approved model artifacts.
+- OpenTelemetry, Prometheus, and Grafana for observability.
+- Docker Compose for reproducible local development.
+- Infrastructure as code and Kubernetes deployment manifests for production.
+
+Keep the design modular without creating unnecessary microservices. Provide a practical resource sizing guide and a documented single-server demonstration deployment.
+
+## 4. Data ingestion and telecom integration
+
+Implement adapters for:
+
+- SIM replacement requests and completed replacement events.
+- Number porting events.
+- Authentication, account recovery, and device events.
+- Beneficiary changes and financial transactions.
+- Investigation outcomes and confirmed fraud labels.
+- Authorized operator SIM swap APIs.
+
+Use a stable, explicitly pinned CAMARA/GSMA-compatible contract where supported. Verify the actual provider’s API version, authentication, capabilities, monitoring window, and error semantics.
+
+Do not invent Ethio telecom, Safaricom Ethiopia, banking, or mobile money endpoints. When actual specifications or credentials are missing, provide a clearly labeled mock adapter and an integration checklist.
+
+Represent these states distinctly:
+
+- Confirmed recent SIM change.
+- No change within the provider’s monitored window.
+- Unknown or unavailable information.
+- Unsupported operation.
+- Stale information.
+- Provider timeout or outage.
+
+Never translate an unavailable or null response into “no SIM change.”
+
+For every event, record:
+
+- Tenant and source.
+- Unique event ID and schema version.
+- Event time and ingestion time.
+- Pseudonymous subscriber/account identifiers.
+- Event type.
+- Authorized attributes.
+- Signal provenance, freshness, and quality.
+
+Implement validation, deduplication, idempotency, replay, dead-letter handling, and bounded handling of late or out-of-order events.
+
+Use UTC internally. Support configurable phone-number normalization, currencies, and display timezones, including Ethiopian numbers and ETB.
+
+## 5. Feature engineering
+
+Create a shared, versioned feature pipeline for training and serving.
+
+Candidate features include:
+
+- Time since last observed SIM change.
+- Replacement counts across configurable windows.
+- Device novelty and device-change frequency.
+- Time between SIM change and account recovery.
+- Time between SIM change and beneficiary creation.
+- Login and failed-authentication velocity.
+- Transaction amount relative to historical behavior.
+- New-beneficiary status and transaction velocity.
+- Geographic change, with accuracy and travel context.
+- Account tenure and historical activity.
+- Authorized agent or outlet behavioral aggregates.
+- Missing-signal indicators and signal age.
+
+Use only information available at the moment of the decision.
+
+Prevent future information, investigation outcomes, post-decision actions, and labels from entering predictive features. Historical aggregate features must be computed as of the decision timestamp.
+
+Implement point-in-time training joins and automated training/serving parity checks.
+
+Define feature TTLs, refresh behavior, stale-feature handling, and cold-start behavior. Treat sparse history and unavailable data explicitly.
+
+## 6. Machine learning pipeline
+
+Implement and compare:
+
+1. A transparent rules-only baseline.
+2. Logistic regression.
+3. A gradient-boosted tree classifier.
+4. An optional Isolation Forest anomaly detector.
+
+Use anomaly detection as a supplementary signal, not an unvalidated fraud probability. Do not add deep learning unless available data and benchmarks justify it.
+
+Address:
+
+- Severe class imbalance.
+- Delayed and incomplete fraud labels.
+- Investigation selection bias.
+- False-negative labels hidden among unresolved cases.
+- Changing fraud patterns.
+- Different behavior across operators and tenants.
+
+Track labels such as confirmed fraud, confirmed legitimate, unresolved, and disputed. Record label provenance and maturation time. Do not automatically label every unreviewed event as legitimate.
+
+Use chronological training, validation, and final holdout periods. Separate linked fraud campaigns or duplicated cases to avoid leakage. Document any unavoidable overlap of recurring subscribers and evaluate performance for both returning and previously unseen subscribers.
+
+Apply resampling or class weighting only within training folds.
+
+Evaluate using:
+
+- Precision-recall AUC.
+- Precision and recall at selected thresholds.
+- False-positive rate.
+- Recall at a fixed analyst-review capacity.
+- False positives per 10,000 assessments.
+- Calibration and Brier score.
+- Expected operational cost under documented assumptions.
+- Performance by operator, account tenure, legitimate replacement scenario, and data availability.
+- Inference latency and resource consumption.
+
+Include confidence intervals where feasible.
+
+Choose thresholds on validation data using business costs and review capacity; preserve the final holdout for unbiased evaluation.
+
+Generate reproducible reports and model cards covering datasets, limitations, feature versions, calibration, thresholds, and intended use.
+
+If only synthetic data exists, mark all metrics as demonstration results. Synthetic accuracy is not evidence of real-world fraud detection performance.
+
+## 7. Decision engine
+
+Implement a versioned policy engine combining validated model outputs, rules, signal quality, and action context.
+
+Return:
+
+- Assessment ID and assessed action.
+- Risk score with documented meaning.
+- Calibrated fraud probability only when validated calibration exists.
+- Risk band.
+- Recommended action.
+- Stable reason codes and human-readable explanations.
+- Model, feature, and policy versions.
+- Signal timestamps, quality, and missing-data indicators.
+- Whether fallback behavior was used.
+- Decision expiration time.
+
+Supported actions:
+
+- ALLOW.
+- STEP_UP.
+- REVIEW.
+- TEMPORARY_HOLD.
+- BLOCK_RECOMMENDATION.
+
+Keep recommendations separate from enforcement. External account or transaction changes require an authorized integration, explicit policy, and auditable execution.
+
+For suspected SIM compromise, do not use SMS to the affected number as the sole step-up factor. Support an existing trusted device, passkey, or independently verified recovery procedure.
+
+Make outage behavior configurable by action type and risk. Do not universally fail open or block every customer.
+
+Account for the time between assessment and execution: bind decisions to the assessed action, expire them, and reassess when relevant signals change. A clean assessment must not authorize unrelated future transactions.
+
+Provide customer recovery, legitimate replacement verification, temporary-hold expiry, and audited manual override workflows.
+
+## 8. APIs and reliability
+
+Provide versioned APIs for:
+
+- Single and batch event ingestion.
+- Risk assessment.
+- Assessment retrieval.
+- Case creation and updates.
+- Analyst feedback and adjudicated labels.
+- Rule and policy management.
+- Model lifecycle operations.
+- Audit retrieval.
+
+Provide OpenAPI documentation and integration examples.
+
+Implement:
+
+- OIDC authentication and scoped service credentials.
+- Tenant-aware authorization.
+- Request validation and rate limits.
+- Idempotency for ingestion and consequential mutations.
+- Signed outbound webhooks.
+- Replay protection.
+- Timeouts, retries with jitter, circuit breakers, and bounded queues.
+- Transactional outbox handling for durable outgoing events.
+- At-least-once processing with tested deduplication.
+
+Do not claim exactly-once processing without evidence.
+
+Define a proposed latency and availability budget before benchmarking. Measure internal inference separately from operator API latency. Report measured results and infrastructure rather than inventing an SLA.
+
+## 9. Analyst dashboard and case management
+
+Build a functioning dashboard with:
+
+- Assessment volume, alerts, and decision distribution.
+- Review queue with filtering, prioritization, assignment, and pagination.
+- Event timelines showing SIM changes, authentication events, and transactions.
+- Explanation panels with signal quality and model/policy versions.
+- Investigation notes and evidence references.
+- Case statuses: open, investigating, resolved fraud, resolved legitimate, unresolved, and disputed.
+- Label correction and approval workflows.
+- Policy editing with validation, simulation, approval, and rollback.
+- Model comparison, drift monitoring, and promotion status.
+- Audit search and controlled exports.
+
+Use roles such as administrator, analyst, supervisor, auditor, and integration service.
+
+Protect sensitive information by default and enforce permissions on the backend. Provide accessible layouts and complete loading, empty, and error states.
+
+Keep synthetic demonstration data visibly identified.
+
+## 10. Security and privacy
+
+Create a threat model covering:
+
+- Unauthorized subscriber lookup.
+- Cross-tenant access.
+- Forged or replayed events.
+- Insider misuse.
+- Label and training-data poisoning.
+- Unauthorized model replacement.
+- Leakage through logs, dashboards, or exports.
+- Webhook abuse and exposed secrets.
+
+Implement:
+
+- Encryption in transit and at rest.
+- Managed secrets and credential rotation.
+- Least-privilege access.
+- MFA for privileged users.
+- Tenant isolation across databases, caches, events, exports, and storage.
+- Keyed pseudonymization for phone numbers and account identifiers; do not rely on unsalted hashes.
+- Masking and redaction.
+- Append-only, tamper-evident audit records.
+- Retention and deletion workflows, including training-data lineage.
+- Approval controls for high-impact policy changes.
+- Restricted access to model artifacts and explanation endpoints.
+
+Do not collect OTP contents, SMS contents, authentication secrets, or unnecessary subscriber data.
+
+Document legal-basis, consent, retention, and data-sharing requirements for review in the deployment jurisdiction. Do not claim regulatory compliance merely because controls exist.
+
+## 11. MLOps and deployment
+
+Implement:
+
+- Reproducible training with dataset and code lineage.
+- Model artifact integrity verification.
+- Feature-schema compatibility checks.
+- Approved model registration and promotion.
+- Shadow deployment before active decisioning.
+- Controlled canary rollout and rollback.
+- Drift, missingness, score-distribution, calibration, and delayed outcome monitoring.
+- Retraining jobs with review gates.
+- A rules-only fallback when model inference is unavailable.
+
+Do not automatically promote a model because it wins one metric or automatically block customers based on drift.
+
+Provide CI/CD with linting, type checks, meaningful tests, dependency scanning, secret scanning, container scanning, and an SBOM.
+
+Include database migrations, health/readiness checks, graceful shutdown, resource limits, backups, restore instructions, and disaster-recovery runbooks.
+
+Keep local, staging, and production configurations separate. Production startup must reject default credentials and enabled mock-provider configurations.
+
+## 12. Required verification
+
+Test the complete event-to-assessment-to-case workflow.
+
+Include scenarios for:
+
+- Fraudulent and legitimate replacement.
+- eSIM migration and device upgrade.
+- Number recycling and porting.
+- New subscriber with no history.
+- Duplicate and replayed events.
+- Late events and clock skew.
+- Unknown or stale operator signals.
+- Operator timeout and provider throttling.
+- Model, Redis, database, and event-broker failures.
+- Cross-tenant access attempts.
+- Invalid webhook signatures.
+- Expired assessments.
+- Label correction.
+- Model and policy rollback.
+
+Run integration tests against actual local infrastructure. Use mocks only for unavailable external systems.
+
+Benchmark sustained traffic, bursts, queue recovery, and degraded operation. Verify that outages follow the configured policy and legitimate users have a recovery path.
+
+Never fabricate passing tests or benchmark results.
+
+## 13. Delivery milestones
+
+Implement in this order:
+
+1. Requirements, threat model, schemas, and architecture.
+2. Local infrastructure and authenticated ingestion.
+3. Feature pipeline, rules baseline, and assessment API.
+4. Reproducible training, evaluation, and model registry.
+5. Integrated model inference and decision policies.
+6. Dashboard, case management, feedback, and audit.
+7. Provider adapters, deployment, monitoring, and resilience.
+8. End-to-end verification and production readiness review.
+
+For each milestone, report completed work, commands executed, test results, unresolved issues, and the next step.
+
+Continue implementation until the authorized scope is complete. Do not replace working code with TODOs or stop after generating a plan.
+
+## 14. Final deliverables and release gates
+
+Deliver:
+
+- Complete source code and dependency lockfiles.
+- One-command local startup and demonstration instructions.
+- Clearly labeled synthetic scenario generator.
+- Data dictionary and integration contracts.
+- Training pipeline, evaluation reports, and model cards.
+- Dashboard and documented APIs.
+- Deployment infrastructure and CI/CD.
+- Test and benchmark results.
+- Security, operations, backup, restore, and incident runbooks.
+- Updated SIM_SWAP_SYSTEM.md.
+- PRODUCTION_READINESS.md.
+
+The readiness report must distinguish implemented capabilities from external prerequisites.
+
+Active production deployment requires verified operator integrations, representative legally obtained data, independently evaluated model performance, approved decision policies, security review, successful recovery testing, and monitored shadow operation.
+
+If any gate remains unmet, identify the exact blocker and the work needed to resolve it. Deliver the completed system without claiming unsupported production readiness.

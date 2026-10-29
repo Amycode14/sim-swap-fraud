@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+*.db
+*.db-journal
+*.db-wal
+node_modules/
+frontend/dist/
+reports/*.png

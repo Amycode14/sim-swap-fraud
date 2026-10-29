@@ -1,0 +1,6 @@
+{
+  "sqlite_migration": "passed",
+  "sqlite_backup_integrity": "passed",
+  "restored_schema_version": "0001",
+  "postgresql_restore": "not tested"
+}

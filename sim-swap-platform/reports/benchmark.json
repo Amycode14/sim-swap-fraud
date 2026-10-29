@@ -1,0 +1,21 @@
+{
+  "description": "Local HTTP assessment benchmark, synthetic provider, SQLite, rules-only",
+  "environment": {
+    "python": "3.12.14",
+    "os": "Linux",
+    "cpu": "x86_64"
+  },
+  "requests": 150,
+  "concurrency": 8,
+  "elapsed_seconds": 1.3080315750003138,
+  "requests_per_second": 114.67613081126426,
+  "latency_ms": {
+    "p50": 65.92390800005887,
+    "p95": 85.30768309988156,
+    "p99": 113.93159839030874
+  },
+  "status_counts": {
+    "201": 150
+  },
+  "scope": "Includes creating an HTTP client per request. Not a sustained production, PostgreSQL, operator, or broker benchmark."
+}

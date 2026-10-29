@@ -1,0 +1,59 @@
+name: sim-shield
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_DB: simshield
+      POSTGRES_USER: shield
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/init_demo.py}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U shield -d simshield]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  redis:
+    image: redis:8.2.1-alpine
+    command: [redis-server, --requirepass, '${REDIS_PASSWORD:?Run scripts/init_demo.py}', --maxmemory, 128mb, --maxmemory-policy, noeviction]
+    healthcheck:
+      test: [CMD-SHELL, 'redis-cli -a "$${REDIS_PASSWORD}" ping | grep PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    restart: unless-stopped
+  api:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://shield:${POSTGRES_PASSWORD}@postgres:5432/simshield
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    ports: ['127.0.0.1:8000:8000']
+    volumes: ['./artifacts:/app/artifacts:ro']
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+  worker:
+    build: .
+    profiles: [webhooks]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://shield:${POSTGRES_PASSWORD}@postgres:5432/simshield
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    command: [python, -m, backend.app.worker]
+    depends_on: {api: {condition: service_healthy}}
+    restart: unless-stopped
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v25.2.4
+    profiles: [streaming]
+    command: [redpanda, start, --smp, '1', --memory, 512M, --reserve-memory, 0M, --overprovisioned, --node-id, '0', --kafka-addr, '0.0.0.0:9092', --advertise-kafka-addr, 'redpanda:9092']
+    volumes: [broker_data:/var/lib/redpanda/data]
+    restart: unless-stopped
+volumes:
+  postgres_data:
+  broker_data:

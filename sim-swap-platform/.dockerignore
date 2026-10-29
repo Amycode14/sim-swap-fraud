@@ -1,0 +1,11 @@
+.env
+.venv
+**/node_modules
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.git
+upload
+reports
+data
+artifacts

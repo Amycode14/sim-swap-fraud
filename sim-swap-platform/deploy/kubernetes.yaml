@@ -1,0 +1,59 @@
+# Deployment scaffold: create namespace, externally managed secrets, DB, Redis, TLS ingress, and signed image first.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sim-shield
+  namespace: sim-shield
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: sim-shield}
+  template:
+    metadata:
+      labels: {app: sim-shield}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, fsGroup: 10001}
+      containers:
+        - name: api
+          image: registry.example.com/sim-shield:REPLACE_WITH_APPROVED_DIGEST
+          ports: [{containerPort: 8000}]
+          envFrom: [{secretRef: {name: sim-shield-config}}]
+          env:
+            - {name: APP_ENV, value: production}
+          resources:
+            requests: {cpu: 500m, memory: 512Mi}
+            limits: {cpu: '2', memory: 2Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          readinessProbe:
+            httpGet: {path: /health/ready, port: 8000}
+            initialDelaySeconds: 10
+          livenessProbe:
+            httpGet: {path: /health/live, port: 8000}
+          volumeMounts:
+            - {name: data, mountPath: /app/data}
+            - {name: temp, mountPath: /tmp}
+            - {name: models, mountPath: /app/artifacts, readOnly: true}
+      volumes:
+        - {name: data, emptyDir: {}}
+        - {name: temp, emptyDir: {}}
+        - name: models
+          persistentVolumeClaim: {claimName: sim-shield-models}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: sim-shield, namespace: sim-shield}
+spec:
+  selector: {app: sim-shield}
+  ports: [{port: 80, targetPort: 8000}]
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: sim-shield, namespace: sim-shield}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {app: sim-shield}

@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "checks": [
+    "login",
+    "dashboard",
+    "case investigation saved",
+    "shadow model selected",
+    "assessment submitted",
+    "mobile layout"
+  ],
+  "page_errors": []
+}

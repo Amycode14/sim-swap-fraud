@@ -1,0 +1,119 @@
+{
+  "algorithm": "logistic",
+  "synthetic": true,
+  "feature_names": [
+    "sim_age_hours",
+    "sim_changes_24h",
+    "requests_24h",
+    "port_recent",
+    "new_device",
+    "recovery_recent",
+    "new_beneficiary",
+    "failed_logins_1h",
+    "transactions_1h",
+    "amount_ratio",
+    "tenure_days",
+    "signal_missing",
+    "trusted_device",
+    "cold_start",
+    "network_recent"
+  ],
+  "feature_version": "features-1",
+  "sha256": "081b3249e3e1a87cb2425d14c1b21b8a7ea5a532189ef0e64d81e444ead01b25",
+  "dataset_sha256": "752656270b34b92443f9869aeeaaf7042f8ddfee572b5063fcfb628c0d6a7e55",
+  "stage": "shadow",
+  "production_validated": false,
+  "calibration": {
+    "coefficient": 1.0436391417057198,
+    "intercept": -3.1894732808020816
+  },
+  "threshold": 0.12,
+  "evaluation": {
+    "pr_auc": 0.7904630450754672,
+    "brier": 0.008162864464428776,
+    "precision": 0.9629629629629629,
+    "recall": 0.7222222222222222,
+    "false_positive_rate": 0.000859106529209622,
+    "false_positives_per_10000_assessments": 8.333333333333334,
+    "review_fraction": 0.0225,
+    "recall_at_5_percent_review_capacity": 0.7777777777777778,
+    "confusion_matrix": {
+      "tn": 1163,
+      "fp": 1,
+      "fn": 10,
+      "tp": 26
+    },
+    "cost_per_assessment": 8.35,
+    "pr_auc_bootstrap_95_ci": [
+      0.6505737768834778,
+      0.9233804295649565
+    ],
+    "threshold": 0.12,
+    "subgroups": {
+      "operator:synthetic-A": {
+        "count": 548,
+        "fraud_count": 14,
+        "precision": 1.0,
+        "recall": 0.7857142857142857
+      },
+      "operator:synthetic-B": {
+        "count": 652,
+        "fraud_count": 22,
+        "precision": 0.9375,
+        "recall": 0.6818181818181818
+      },
+      "scenario:esim": {
+        "count": 85,
+        "fraud_count": 2,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "scenario:fraud": {
+        "count": 27,
+        "fraud_count": 27,
+        "precision": 1.0,
+        "recall": 0.9629629629629629
+      },
+      "scenario:normal": {
+        "count": 738,
+        "fraud_count": 5,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "scenario:recovery": {
+        "count": 62,
+        "fraud_count": 1,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "scenario:recycle": {
+        "count": 33,
+        "fraud_count": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "scenario:replacement": {
+        "count": 112,
+        "fraud_count": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "scenario:travel": {
+        "count": 65,
+        "fraud_count": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "scenario:upgrade": {
+        "count": 78,
+        "fraud_count": 1,
+        "precision": 0.0,
+        "recall": 0.0
+      }
+    },
+    "subscriber_cohorts": {
+      "returning": 0,
+      "unseen": 1200
+    }
+  }
+}
